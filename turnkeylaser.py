@@ -951,7 +951,7 @@ class Gcode_tools(inkex.Effect):
         self.skipped = 0
         
         
-        def compile_paths(parent, node, trans):
+        def compile_paths(parent, node, trans, laserPower=100):
             # Apply the object transform, along with the parent transformation
             mat = node.get('transform', None)
             path = {}
@@ -986,7 +986,7 @@ class Gcode_tools(inkex.Effect):
                 # This node is a group of other nodes
                 pathsGroup = []
                 for child in node.iterchildren():
-                    data = compile_paths(parent, child, trans)
+                    data = compile_paths(parent, child, trans, laserPower)
                     #inkex.errormsg(str(data))
                     if type(data) is not list:
                         pathsGroup.append(data.copy())
@@ -1015,13 +1015,36 @@ class Gcode_tools(inkex.Effect):
                     else:
                         im = Image.open(filename).convert('L')
                     img = ImageOps.invert(im) 
-                    
+                  
                     #Get the image size
                     imageDataWidth, imageDataheight = img.size
+
+                    # dithering image and compile the pixels
+                    inkex.errormsg("start dithering.")
+                    palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=laserPower-1).getpalette()))
+                    inkex.errormsg("dither for "+str(len(palette))+" colors palette...")
+                    pixel = img.load()
+                    pixels = []
+                    for line in range(0, imageDataheight):
+                        r=[]
+                        for row in range(0, imageDataWidth):
+                            oldpix = pixel[row, line]
+                            newpix = min(palette, key=lambda p:abs(p-oldpix))
+                            quant_error = oldpix - newpix
+                            try:
+                                pixel[row+1, line] = pixel[row+1, line] + quant_error * 7/16
+                                pixel[row-1, line+1] = pixel[row-1, line+1] + quant_error * 3/16
+                                pixel[row, line+1] = pixel[row, line+1] + quant_error * 5/16
+                                pixel[row+1, line+1] = pixel[row+1, line+1] + quant_error * 1/16
+                            except:
+                                pass
+                            
+                    pixels = [[pixel[r, l] for r in xrange(imageDataWidth)] for l in xrange(imageDataheight)]
+                            
                     
                     #Compile the pixels.
-                    pixels = list(img.getdata())
-                    pixels = [pixels[i * (imageDataWidth):(i + 1) * (imageDataWidth)] for i in xrange(imageDataheight)]
+                    #pixels = list(img.getdata())
+                    #pixels = [pixels[i * (imageDataWidth):(i + 1) * (imageDataWidth)] for i in xrange(imageDataheight)]
                     
                     path['type'] = "raster"
                     path['width'] = imageDataWidth
@@ -1177,6 +1200,22 @@ class Gcode_tools(inkex.Effect):
             trans = layer.get('transform', None)
             trans = simpletransform.parseTransform(trans)
 
+
+            #Determind the power of the laser that this layer should be cut at.
+            #If the layer is not named as an integer value then default to the laser intensity set at the export settings.
+            #Fetch the laser power from the export dialog box.
+            laserPower = self.options.laser
+
+            try:
+                if (int(layerName) > 0 and int(layerName) <= 100):
+                    laserPower = int(layerName)
+                else :
+                    laserPower = self.options.laser
+            except ValueError,e:
+                laserPower = self.options.laser
+                inkex.errormsg("Unable to parse power level for layer name. Using default power level %d percent." % (self.options.laser))
+
+
             for node in layer.iterchildren():
                 if (node in selected):
                     #Vector path data, cut from x to y in a line or curve
@@ -1184,14 +1223,13 @@ class Gcode_tools(inkex.Effect):
                     logger.write("node %s" % str(node.tag))
                     selected.remove(node) 
                         
-                        
                     try:
-                        newPath = compile_paths(self, node, trans).copy();
+                        newPath = compile_paths(self, node, trans, laserPower).copy();
                         pathList.append(newPath)       
                         inkex.errormsg("Built gcode for "+str(node.get("id"))+" - will be cut as %s." % (newPath['type']) )
                     except:
                         messageOnce = True
-                        for objectData in compile_paths(self, node, trans):
+                        for objectData in compile_paths(self, node, trans, laserPower):
                             #if (messageOnce):
                             inkex.errormsg("Built gcode for group "+str(node.get("id"))+", item %s - will be cut as %s." % (objectData['id'], objectData['type']) )
                                 #messageOnce = False
@@ -1203,21 +1241,6 @@ class Gcode_tools(inkex.Effect):
             if (not pathList):
                 logger.write("no objects in layer")
                 continue
-                
-            
-            #Determind the power of the laser that this layer should be cut at.
-            #If the layer is not named as an integer value then default to the laser intensity set at the export settings.
-            #Fetch the laser power from the export dialog box.
-            laserPower = self.options.laser
-            
-            try:
-                if (int(layerName) > 0 and int(layerName) <= 100):
-                    laserPower = int(layerName)
-                else :
-                    laserPower = self.options.laser
-            except ValueError,e:
-                laserPower = self.options.laser
-                inkex.errormsg("Unable to parse power level for layer name. Using default power level %d percent." % (self.options.laser))
                 
             
             
@@ -1271,20 +1294,18 @@ class Gcode_tools(inkex.Effect):
             trans = simpletransform.parseTransform("")
             for node in selected:
                 try:
-                    newPath = compile_paths(self, node, trans).copy();
+                    newPath = compile_paths(self, node, trans, laserPower).copy();
                     pathList.append(newPath)       
                     inkex.errormsg("Built gcode for "+str(node.get("id"))+" - will be cut as %s." % (newPath['type']) )
                 except:
                     messageOnce = True
-                    for objectData in compile_paths(self, node, trans):
+                    for objectData in compile_paths(self, node, trans, laserPower):
                         #if (messageOnce):
                         inkex.errormsg("Built gcode for group "+str(node.get("id"))+", item %s - will be cut as %s." % (objectData['id'], objectData['type']) )
                             #messageOnce = False
                         pathList.append(objectData)
 
             if (pathList):  
-            
-                
                 
                 for objectData in pathList:
                     
