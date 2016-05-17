@@ -420,11 +420,12 @@ def parse_layer_name(txt):
                 (field, value) = arg.split("=")
             except:
                 raise ValueError("Invalid argument in layer '%s'" % layerName)
-            if (field == "feed" or field == "ppm"):
+            if (field == "feed" or field == "ppm" or field="dither"):
                 try:
                     value = float(value)
                 except:
                     raise ValueError("Invalid layer name '%s'" % value)
+
             params[field] = value
             logger.write("%s == %s" % (field, value))
 
@@ -951,7 +952,7 @@ class Gcode_tools(inkex.Effect):
         self.skipped = 0
         
         
-        def compile_paths(parent, node, trans, laserPower=100):
+        def compile_paths(parent, node, trans, laserPower=100, altdither=False):
             # Apply the object transform, along with the parent transformation
             mat = node.get('transform', None)
             path = {}
@@ -1019,32 +1020,32 @@ class Gcode_tools(inkex.Effect):
                     #Get the image size
                     imageDataWidth, imageDataheight = img.size
 
-                    # dithering image and compile the pixels
-                    inkex.errormsg("start dithering.")
-                    palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=laserPower-1).getpalette()))
-                    inkex.errormsg("dither for "+str(len(palette))+" colors palette...")
-                    pixel = img.load()
-                    pixels = []
-                    for line in range(0, imageDataheight):
-                        r=[]
-                        for row in range(0, imageDataWidth):
-                            oldpix = pixel[row, line]
-                            newpix = min(palette, key=lambda p:abs(p-oldpix))
-                            quant_error = oldpix - newpix
-                            try:
-                                pixel[row+1, line] = pixel[row+1, line] + quant_error * 7/16
-                                pixel[row-1, line+1] = pixel[row-1, line+1] + quant_error * 3/16
-                                pixel[row, line+1] = pixel[row, line+1] + quant_error * 5/16
-                                pixel[row+1, line+1] = pixel[row+1, line+1] + quant_error * 1/16
-                            except:
-                                pass
+                    if altdither:
+                        # dithering image and compile the pixels
+                        inkex.errormsg("start dithering.")
+                        palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=laserPower-1).getpalette()))
+                        inkex.errormsg("dither for "+str(len(palette))+" colors palette...")
+                        pixel = img.load()
+                        pixels = []
+                        for line in range(0, imageDataheight):
+                            r=[]
+                            for row in range(0, imageDataWidth):
+                                oldpix = pixel[row, line]
+                                newpix = min(palette, key=lambda p:abs(p-oldpix))
+                                quant_error = oldpix - newpix
+                                try:
+                                    pixel[row+1, line] = pixel[row+1, line] + quant_error * 7/16
+                                    pixel[row-1, line+1] = pixel[row-1, line+1] + quant_error * 3/16
+                                    pixel[row, line+1] = pixel[row, line+1] + quant_error * 5/16
+                                    pixel[row+1, line+1] = pixel[row+1, line+1] + quant_error * 1/16
+                                except:
+                                    pass
                             
-                    pixels = [[pixel[r, l] for r in xrange(imageDataWidth)] for l in xrange(imageDataheight)]
-                            
-                    
-                    #Compile the pixels.
-                    #pixels = list(img.getdata())
-                    #pixels = [pixels[i * (imageDataWidth):(i + 1) * (imageDataWidth)] for i in xrange(imageDataheight)]
+                        pixels = [[pixel[r, l] for r in xrange(imageDataWidth)] for l in xrange(imageDataheight)]
+                    else:
+                        #Compile the pixels.
+                        pixels = list(img.getdata())
+                        pixels = [pixels[i * (imageDataWidth):(i + 1) * (imageDataWidth)] for i in xrange(imageDataheight)]
                     
                     path['type'] = "raster"
                     path['width'] = imageDataWidth
@@ -1191,6 +1192,7 @@ class Gcode_tools(inkex.Effect):
             # Check if the layer specifies an alternative (from the default) feed rate
             altfeed = layerParams.get("feed", self.options.feed)
             altppm = layerParams.get("ppm", None)
+            altdither = layerParams.get("dither", False)
 
             logger.write("layer %s" % layerName)
             if (layerParams):
@@ -1224,12 +1226,12 @@ class Gcode_tools(inkex.Effect):
                     selected.remove(node) 
                         
                     try:
-                        newPath = compile_paths(self, node, trans, laserPower).copy();
+                        newPath = compile_paths(self, node, trans, laserPower, altdither).copy();
                         pathList.append(newPath)       
                         inkex.errormsg("Built gcode for "+str(node.get("id"))+" - will be cut as %s." % (newPath['type']) )
                     except:
                         messageOnce = True
-                        for objectData in compile_paths(self, node, trans, laserPower):
+                        for objectData in compile_paths(self, node, trans, laserPower, altdither):
                             #if (messageOnce):
                             inkex.errormsg("Built gcode for group "+str(node.get("id"))+", item %s - will be cut as %s." % (objectData['id'], objectData['type']) )
                                 #messageOnce = False
@@ -1294,12 +1296,12 @@ class Gcode_tools(inkex.Effect):
             trans = simpletransform.parseTransform("")
             for node in selected:
                 try:
-                    newPath = compile_paths(self, node, trans, laserPower).copy();
+                    newPath = compile_paths(self, node, trans, laserPower, altdither).copy();
                     pathList.append(newPath)       
                     inkex.errormsg("Built gcode for "+str(node.get("id"))+" - will be cut as %s." % (newPath['type']) )
                 except:
                     messageOnce = True
-                    for objectData in compile_paths(self, node, trans, laserPower):
+                    for objectData in compile_paths(self, node, trans, laserPower, altdither):
                         #if (messageOnce):
                         inkex.errormsg("Built gcode for group "+str(node.get("id"))+", item %s - will be cut as %s." % (objectData['id'], objectData['type']) )
                             #messageOnce = False
