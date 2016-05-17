@@ -490,7 +490,9 @@ class Gcode_tools(inkex.Effect):
         self.OptionParser.add_option("",   "--pronterface",                    action="store", type="inkbool",         dest="pronterface", default=True,    help="Are you using Pronterface? If so we need to change some characters in the GCode raster data to keep pronterface happy. Slight loss of intensity on pure blacks but nothing major.")
         self.OptionParser.add_option("",   "--origin",                    action="store", type="string",         dest="origin", default="topleft",    help="Origin of the Y Axis")
         self.OptionParser.add_option("",   "--optimiseraster",                 action="store", type="inkbool",    dest="optimiseraster", default=True, help="Optimise raster horizontal scanning speed")
-        
+        self.OptionParser.add_option("",   "--dither",                         action="store", type="inkbool",    dest="dither", default=False, help="Enable Dithering")
+        self.OptionParser.add_option("",   "--showimg",                        action="store",  type="inkbool",   dest="showimg", default=False, help="Show rastered images")
+        self.OptionParser.add_option("",   "--colorspace",                     action="store",   type="int",      dest="colorspace", default="256", help="reduce colorspace")
 		
     def parse_curve(self, path):
 #        if self.options.Xscale!=self.options.Yscale:
@@ -635,7 +637,7 @@ class Gcode_tools(inkex.Effect):
         return " ".join(args)
         
         
-    def generate_raster_gcode(self, curve, laserPower, altfeed=None, altdither=False):
+    def generate_raster_gcode(self, curve, laserPower, altfeed=None, altdither=False, altcolorspace=256, altshowimg=False):
         gcode = ''
         
         #Setup our feed rate, either from the layer name or from the default value.
@@ -956,7 +958,7 @@ class Gcode_tools(inkex.Effect):
         self.skipped = 0
         
         
-        def compile_paths(parent, node, trans, laserPower=100, altdither=False):
+        def compile_paths(parent, node, trans, laserPower=100, altdither=False, altcolorspace=256, altshowimg=False):
             # Apply the object transform, along with the parent transformation
             mat = node.get('transform', None)
             path = {}
@@ -1016,40 +1018,52 @@ class Gcode_tools(inkex.Effect):
                     #Fetch the image Data
                     filename = "%stmpinkscapeexport.png" % (tmp)
                     if (self.options.origin == 'topleft'):
-                        im = Image.open(filename).transpose(Image.FLIP_TOP_BOTTOM).convert('L')
+                        img = Image.open(filename).transpose(Image.FLIP_TOP_BOTTOM).convert('L')
                     else:
-                        im = Image.open(filename).convert('L')
-                    img = ImageOps.invert(im) 
+                        img = Image.open(filename).convert('L')
                   
+                    img = ImageOps.invert(img)
+
                     #Get the image size
                     imageDataWidth, imageDataheight = img.size
 
-                    if altdither:
+                    pixel = img.load()
+                  
+                    if altdither and altcolorspace < 256:
                         # dithering image and compile the pixels
-                        inkex.errormsg("start dithering.")
-                        palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=laserPower-1).getpalette()))
-                        inkex.errormsg("dither for "+str(len(palette))+" colors palette...")
-                        pixel = img.load()
-                        pixels = []
+                        if altcolorspace == 0:
+                           palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=laserPower-1).getpalette()))
+                        else:
+                           palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=altcolorspace-1).getpalette()))
+                        inkex.errormsg("reduce colorspace to "+str(len(palette))+" colors palette...")
+                        if altdither:
+                           inkex.errormsg("dithering enabled")
                         for line in range(0, imageDataheight):
-                            r=[]
                             for row in range(0, imageDataWidth):
                                 oldpix = pixel[row, line]
                                 newpix = min(palette, key=lambda p:abs(p-oldpix))
-                                quant_error = oldpix - newpix
-                                try:
-                                    pixel[row+1, line] = pixel[row+1, line] + quant_error * 7/16
-                                    pixel[row-1, line+1] = pixel[row-1, line+1] + quant_error * 3/16
-                                    pixel[row, line+1] = pixel[row, line+1] + quant_error * 5/16
-                                    pixel[row+1, line+1] = pixel[row+1, line+1] + quant_error * 1/16
-                                except:
-                                    pass
+                                pixel[row, line] = newpix
+                                if altdither:
+                                    quant_error = oldpix - newpix
+                                    try:
+                                        pixel[row+1, line] = pixel[row+1, line] + quant_error * 7/16
+                                        pixel[row-1, line+1] = pixel[row-1, line+1] + quant_error * 3/16
+                                        pixel[row, line+1] = pixel[row, line+1] + quant_error * 5/16
+                                        pixel[row+1, line+1] = pixel[row+1, line+1] + quant_error * 1/16
+                                    except:
+                                        pass
                             
-                        pixels = [[pixel[r, l] for r in xrange(imageDataWidth)] for l in xrange(imageDataheight)]
-                    else:
-                        #Compile the pixels.
-                        pixels = list(img.getdata())
-                        pixels = [pixels[i * (imageDataWidth):(i + 1) * (imageDataWidth)] for i in xrange(imageDataheight)]
+                    if altshowimg:
+                        showim = img.copy()
+                        if (self.options.origin == 'topleft'):
+                           showim = showim.transpose(Image.FLIP_TOP_BOTTOM)
+                        ImageOps.invert(showim).show()
+                        showim.show()
+
+
+                    img = ImageOps.invert(img)
+
+                    pixels = [[pixel[r, l] for r in xrange(imageDataWidth)] for l in xrange(imageDataheight)]
                     
                     path['type'] = "raster"
                     path['width'] = imageDataWidth
@@ -1196,7 +1210,9 @@ class Gcode_tools(inkex.Effect):
             # Check if the layer specifies an alternative (from the default) feed rate
             altfeed = layerParams.get("feed", self.options.feed)
             altppm = layerParams.get("ppm", None)
-            altdither = layerParams.get("dither", False)
+            altdither = layerParams.get("dither", self.options.dither)
+            altcolorspace = layerParams.get("colorspace", self.options.colorspace)
+            altshowimg = layerParams.get("showimg", self.options.showimg)
 
             logger.write("layer %s" % layerName)
             if (layerParams):
@@ -1230,12 +1246,12 @@ class Gcode_tools(inkex.Effect):
                     selected.remove(node) 
                         
                     try:
-                        newPath = compile_paths(self, node, trans, laserPower, altdither).copy();
+                        newPath = compile_paths(self, node, trans, laserPower, altdither, altcolorspace, altshowimg).copy();
                         pathList.append(newPath)       
                         inkex.errormsg("Built gcode for "+str(node.get("id"))+" - will be cut as %s." % (newPath['type']) )
                     except:
                         messageOnce = True
-                        for objectData in compile_paths(self, node, trans, laserPower, altdither):
+                        for objectData in compile_paths(self, node, trans, laserPower, altdither, altcolorspace, altshowimg):
                             #if (messageOnce):
                             inkex.errormsg("Built gcode for group "+str(node.get("id"))+", item %s - will be cut as %s." % (objectData['id'], objectData['type']) )
                                 #messageOnce = False
@@ -1283,7 +1299,7 @@ class Gcode_tools(inkex.Effect):
                     
                     gcode += header_data+self.generate_gcode(curve, 0, laserPower, altfeed=altfeed, altppm=altppm)
                 elif (curve['type'] == "raster"):
-                    gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed, altdither=altdither)
+                    gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed, altdither=altdither, altcolorspace=altcolorspace, altshowimg=altshowimg)
 
                     
         #Turnkey - Need to figure out why inkscape sometimes gets to this point and hasn't found the objects above.            
@@ -1300,12 +1316,12 @@ class Gcode_tools(inkex.Effect):
             trans = simpletransform.parseTransform("")
             for node in selected:
                 try:
-                    newPath = compile_paths(self, node, trans, laserPower, altdither).copy();
+                    newPath = compile_paths(self, node, trans, laserPower, altdither, altcolorspace, altshowimg).copy();
                     pathList.append(newPath)       
                     inkex.errormsg("Built gcode for "+str(node.get("id"))+" - will be cut as %s." % (newPath['type']) )
                 except:
                     messageOnce = True
-                    for objectData in compile_paths(self, node, trans, laserPower, altdither):
+                    for objectData in compile_paths(self, node, trans, laserPower, altdither, altcolorspace, altshowimg):
                         #if (messageOnce):
                         inkex.errormsg("Built gcode for group "+str(node.get("id"))+", item %s - will be cut as %s." % (objectData['id'], objectData['type']) )
                             #messageOnce = False
@@ -1358,7 +1374,7 @@ class Gcode_tools(inkex.Effect):
                         
                         gcode += header_data+self.generate_gcode(curve, 0, laserPower, altfeed=altfeed, altppm=altppm)
                     elif (curve['type'] == "raster"):
-                        gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed, altdither=altdither)
+                        gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed, altdither=altdither, altcolorspace=altcolorspace, altshowimg=altshowimg)
                   
         if self.options.homeafter:
             gcode += "\n\nG00 X0 Y0 F4000 ; home"

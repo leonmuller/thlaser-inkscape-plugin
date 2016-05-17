@@ -80,7 +80,10 @@ For the latest revision please visit https://github.com/TurnkeyTyranny/laser-gco
             <param name="unit" type="enum" _gui-text="Units: ">
                 <item value="mm">mm</item>
                 <item value="in">in</item>
-            </param>
+             </param>
+            <param name="dither" type="boolean" _gui-text="Apply dithering">false</param>
+            <param name="colorspace" type="int" _gui-text="color space. 0 to reduce derived from power">256</param>
+            <param name="showimg" type="boolean" _gui-text="Show generated raster images">false</param>
         </page>
     </param>    
 </inkscape-extension>
