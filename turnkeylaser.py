@@ -428,7 +428,7 @@ def parse_layer_name(txt):
             params[field] = value
             logger.write("%s == %s" % (field, value))
 
-    return (layerName, params)
+    return (layerName.split()[len(layerName.split())-1], params)
 
 ################################################################################
 ###
