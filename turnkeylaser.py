@@ -420,9 +420,13 @@ def parse_layer_name(txt):
                 (field, value) = arg.split("=")
             except:
                 raise ValueError("Invalid argument in layer '%s'" % layerName)
-            if (field == "feed" or field == "ppm" or field="dither"):
+            if (field == "feed" or field == "ppm" or field == "dither" ):
                 try:
-                    value = float(value)
+                    if field=="dither":
+                        if value == 'true':
+                            value=True
+                    else:
+                        value = float(value)
                 except:
                     raise ValueError("Invalid layer name '%s'" % value)
 
@@ -631,7 +635,7 @@ class Gcode_tools(inkex.Effect):
         return " ".join(args)
         
         
-    def generate_raster_gcode(self, curve, laserPower, altfeed=None):
+    def generate_raster_gcode(self, curve, laserPower, altfeed=None, altdither=False):
         gcode = ''
         
         #Setup our feed rate, either from the layer name or from the default value.
@@ -1279,7 +1283,7 @@ class Gcode_tools(inkex.Effect):
                     
                     gcode += header_data+self.generate_gcode(curve, 0, laserPower, altfeed=altfeed, altppm=altppm)
                 elif (curve['type'] == "raster"):
-                    gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed)
+                    gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed, altdither=altdither)
 
                     
         #Turnkey - Need to figure out why inkscape sometimes gets to this point and hasn't found the objects above.            
@@ -1354,7 +1358,7 @@ class Gcode_tools(inkex.Effect):
                         
                         gcode += header_data+self.generate_gcode(curve, 0, laserPower, altfeed=altfeed, altppm=altppm)
                     elif (curve['type'] == "raster"):
-                        gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed)
+                        gcode_raster += header_data+self.generate_raster_gcode(curve, laserPower, altfeed=altfeed, altdither=altdither)
                   
         if self.options.homeafter:
             gcode += "\n\nG00 X0 Y0 F4000 ; home"
