@@ -1033,8 +1033,12 @@ class Gcode_tools(inkex.Effect):
                         # dithering image and compile the pixels
                         if altcolorspace == 0:
                            palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=laserPower-1).getpalette()))
+                        elif altcolorspace <= 2:
+                           palette=[0, 255]
                         else:
                            palette=list(set(img.convert("P", palette=Image.ADAPTIVE, colors=altcolorspace-1).getpalette()))
+                        maxp=max(palette)
+                        palette = [n*255/maxp for n in palette]
                         inkex.errormsg("reduce colorspace to "+str(len(palette))+" colors palette...")
                         if altdither:
                            inkex.errormsg("dithering enabled")
