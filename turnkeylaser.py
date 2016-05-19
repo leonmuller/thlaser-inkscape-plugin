@@ -493,6 +493,8 @@ class Gcode_tools(inkex.Effect):
         self.OptionParser.add_option("",   "--dither",                         action="store", type="inkbool",    dest="dither", default=False, help="Enable Dithering")
         self.OptionParser.add_option("",   "--showimg",                        action="store",  type="inkbool",   dest="showimg", default=False, help="Show rastered images")
         self.OptionParser.add_option("",   "--colorspace",                     action="store",   type="int",      dest="colorspace", default="256", help="reduce colorspace")
+        self.OptionParser.add_option("",   "--dpi",                            action="store",   type="int",      dest="dpi", default="270", help="set DPI for inkscape export")
+        self.OptionParser.add_option("",   "--invert",                         action="store",   type="inkbool",  dest="invert", default=True, help="swap to negative colors")
 		
     def parse_curve(self, path):
 #        if self.options.Xscale!=self.options.Yscale:
@@ -657,8 +659,9 @@ class Gcode_tools(inkex.Effect):
         #Rasters are exported internally at 270dpi. 
         #So R = 1 / (270 / 25.4) 
         #     = 0.09406
+        mmperpix = round(1/(self.option.dpi/25.4), 5)
         gcode += '\n\n;Beginning of Raster Image '+str(curve['id'])+' pixel size: '+str(curve['width'])+'x'+str(curve['height'])+'\n'
-        gcode += 'M649 S'+str(laserPower)+' B2 D0 R0.09406\n'
+        gcode += 'M649 S'+str(laserPower)+' B2 D0 R'+str(mmperpix)+'\n'
          
         #Do not remove these two lines, they're important. Will not raster correctly if feedrate is not set prior.
         #Move fast to point, cut at correct speed.
@@ -1007,7 +1010,7 @@ class Gcode_tools(inkex.Effect):
                     tmp = self.getTmpPath() #OS tmp directory
                     bgcol = "#ffffff" #White
                     curfile = curfile = self.args[-1] #The current inkscape project we're exporting from.
-                    command="inkscape --export-dpi 270 -i %s --export-id-only -e \"%stmpinkscapeexport.png\" -b \"%s\" %s" % (node.get("id"),tmp,bgcol,curfile) 
+                    command="inkscape --export-dpi %s -i %s --export-id-only -e \"%stmpinkscapeexport.png\" -b \"%s\" %s" % (self.options.dpi,node.get("id"),tmp,bgcol,curfile) 
             
                     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     return_code = p.wait()
@@ -1022,7 +1025,8 @@ class Gcode_tools(inkex.Effect):
                     else:
                         img = Image.open(filename).convert('L')
                   
-                    img = ImageOps.invert(img)
+                    if self.options.invert:
+                        img = ImageOps.invert(img)
 
                     #Get the image size
                     imageDataWidth, imageDataheight = img.size
@@ -1061,7 +1065,8 @@ class Gcode_tools(inkex.Effect):
                         showim = img.copy()
                         if (self.options.origin == 'topleft'):
                            showim = showim.transpose(Image.FLIP_TOP_BOTTOM)
-                        ImageOps.invert(showim).show()
+                        if self.options.invert:
+                           ImageOps.invert(showim).show()
                         showim.show()
 
 

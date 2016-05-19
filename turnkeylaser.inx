@@ -54,7 +54,7 @@ For the latest revision please visit https://github.com/TurnkeyTyranny/laser-gco
             <param name="logging" type="boolean" _gui-text="Log debug output from plugin:">true</param>
             <param name="optimiseraster" type="boolean" _gui-text="Optimise raster horizontal scanning speed:">true</param>
             <_param name="help" type="description">Will optimise raster paths, may cause slight overburn at the edges of the raster.</_param>
-            
+             <param name="dpi" type="int" _gui-text="Set exported image DPI">270</param>
         </page>
         
         <page name='tab' _gui-text='Preferences'>
@@ -81,6 +81,7 @@ For the latest revision please visit https://github.com/TurnkeyTyranny/laser-gco
                 <item value="mm">mm</item>
                 <item value="in">in</item>
              </param>
+             <param name="invert" type="boolean" _gui-text="Swap colors">true</param>
             <param name="dither" type="boolean" _gui-text="Apply dithering">false</param>
             <param name="colorspace" type="int" _gui-text="color space. 0 to reduce derived from power">256</param>
             <param name="showimg" type="boolean" _gui-text="Show generated raster images">false</param>
