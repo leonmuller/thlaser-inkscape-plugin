@@ -54,7 +54,7 @@ For the latest revision please visit https://github.com/TurnkeyTyranny/laser-gco
             <param name="logging" type="boolean" _gui-text="Log debug output from plugin:">true</param>
             <param name="optimiseraster" type="boolean" _gui-text="Optimise raster horizontal scanning speed:">true</param>
             <_param name="help" type="description">Will optimise raster paths, may cause slight overburn at the edges of the raster.</_param>
-             <param name="dpi" type="int" _gui-text="Set exported image DPI">270</param>
+             <param name="dpi" type="int" min="90" max="900"  _gui-text="Set exported image DPI">270</param>
         </page>
         
         <page name='tab' _gui-text='Preferences'>
