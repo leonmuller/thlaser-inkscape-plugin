@@ -83,7 +83,7 @@ For the latest revision please visit https://github.com/TurnkeyTyranny/laser-gco
              </param>
              <param name="invert" type="boolean" _gui-text="Swap colors">true</param>
             <param name="dither" type="boolean" _gui-text="Apply dithering">false</param>
-            <param name="colorspace" type="int" _gui-text="color space. 0 to reduce derived from power">256</param>
+            <param name="colorspace" type="int" min="2" max="256" _gui-text="color space. 0 to reduce derived from power">256</param>
             <param name="showimg" type="boolean" _gui-text="Show generated raster images">false</param>
         </page>
     </param>    
