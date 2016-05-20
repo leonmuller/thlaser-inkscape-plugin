@@ -495,6 +495,8 @@ class Gcode_tools(inkex.Effect):
         self.OptionParser.add_option("",   "--colorspace",                     action="store",   type="int",      dest="colorspace", default="256", help="reduce colorspace")
         self.OptionParser.add_option("",   "--dpi",                            action="store",   type="int",      dest="dpi", default="270", help="set DPI for inkscape export")
         self.OptionParser.add_option("",   "--invert",                         action="store",   type="inkbool",  dest="invert", default=True, help="swap to negative colors")
+        self.OptionParser.add_option("",   "--cooler"                          action="store",   type="float",    dest="cooler", default="0.0", help="set cooler temperature. 0 to disable")
+        self.OptionParser.add_option("",   "--cooleronstop"                    action="store",   type="float",    dest="cooleronstop", default=False, help="continue to cool down when finished")
 		
     def parse_curve(self, path):
 #        if self.options.Xscale!=self.options.Yscale:
@@ -816,7 +818,9 @@ class Gcode_tools(inkex.Effect):
                 
         gcode += ("M5 \n");
         gcode += ';End of Raster Image '+str(curve['id'])+'\n\n'
-        
+        if float(self.options.cooler) > 0.0 and bool(self.options.coolerstop):
+           gcode += 'M140 C'+str(self.options.cooler)+' ; continue to cool down laser\n'
+
         return gcode
     
     def generate_gcode(self, curve, depth, laserPower, altfeed=None, altppm=None):
@@ -1444,7 +1448,8 @@ class Gcode_tools(inkex.Effect):
             return
         
         gcode += "M80 ; Turn on Optional Peripherals Board at LMN\n"
-         
+        if float(self.options.cooler) > 0:
+           gcode +="M140 C S"+str(self.options.cooler)+"\n"
 
         #Put the header data in the gcode file
         gcode += """

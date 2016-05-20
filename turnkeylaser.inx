@@ -55,6 +55,9 @@ For the latest revision please visit https://github.com/TurnkeyTyranny/laser-gco
             <param name="optimiseraster" type="boolean" _gui-text="Optimise raster horizontal scanning speed:">true</param>
             <_param name="help" type="description">Will optimise raster paths, may cause slight overburn at the edges of the raster.</_param>
              <param name="dpi" type="int" min="90" max="900"  _gui-text="Set exported image DPI">270</param>
+             <param name="cooler" type="float" precision="1" min="0.0", max="35.0" _gui-text="Cooler target temperature (celsius)">0.0</param>
+             <_param name="help" type="description">Set 0 to disable cooling</_param>
+            <param name="cooleronstop" type="boolean" _gui-text="continue to cool down laser when finished">false</param>
         </page>
         
         <page name='tab' _gui-text='Preferences'>
@@ -66,8 +69,8 @@ For the latest revision please visit https://github.com/TurnkeyTyranny/laser-gco
             <param name="filename" type="string" _gui-text="File name: ">output.g</param>
             <param name="directory" type="string" _gui-text="Directory: "></param>
             <_param name="help" type="description">(blank is your desktop)</_param>
-            <param name="feed" type="int" min="0" max="5000" _gui-text="Default Cut Feedrate:">300</param>
-            <param name="Mfeed" type="int" min="0" max="5000" _gui-text="Default Traversal Feedrate:">2000</param>
+            <param name="feed" type="int" min="0" max="30000" _gui-text="Default Cut Feedrate:">300</param>
+            <param name="Mfeed" type="int" min="0" max="30000" _gui-text="Default Traversal Feedrate:">2000</param>
             <param name="laser" type="int" min="0" max="100" _gui-text="Default Laser Intensity (0-100%):">10</param>
             <param name="homebefore" type="boolean" _gui-text="Home X and Y Before:">true</param>
             <param name="homeafter" type="boolean" _gui-text="Home X and Y After:">false</param>
