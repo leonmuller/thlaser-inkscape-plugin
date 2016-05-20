@@ -659,7 +659,7 @@ class Gcode_tools(inkex.Effect):
         #Rasters are exported internally at 270dpi. 
         #So R = 1 / (270 / 25.4) 
         #     = 0.09406
-        mmperpix = round(1/(self.option.dpi/25.4), 5)
+        mmperpix = round(1/(self.options.dpi/25.4), 5)
         gcode += '\n\n;Beginning of Raster Image '+str(curve['id'])+' pixel size: '+str(curve['width'])+'x'+str(curve['height'])+'\n'
         gcode += 'M649 S'+str(laserPower)+' B2 D0 R'+str(mmperpix)+'\n'
          
