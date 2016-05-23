@@ -1,8 +1,0 @@
-All settings at 40W - 20000hz pwm
-F600 = 600 millimetres a minute.
-Note : 73% on my unit runs the laser tube at 18ma. This is the maximum current that should be put through a 40 watt CO2 laser tube.
-
-Cut Perspex = F300 @ 73%
-Score cardboard = F1400 @ 9%
-Cut Paper (Pulsed) = F600 @ 8% - 60ms pulse 2 pulse per millimetre.
-Cut vinyl on paper backing = F600 @ 8% - 4 pulse per millimetre.
