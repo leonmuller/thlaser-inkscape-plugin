@@ -1235,7 +1235,7 @@ class Gcode_tools(inkex.Effect):
                
                 #Turnkey : Always output the layer header for information.
                 if (len(layers) > 0):
-                    header_data += LASER_OFF+"\n"
+                    header_data += LASER_ON+"\n"
                     size = 60
                     header_data += ";(%s)\n" % ("*"*size)
                     header_data += (";(***** Layer: %%-%ds *****)\n" % (size-19)) % (originalLayerName)
@@ -1312,7 +1312,7 @@ class Gcode_tools(inkex.Effect):
                     header_data = ""
                     #Turnkey : Always output the layer header for information.
                     if (len(layers) > 0):
-                        header_data += LASER_OFF+"\n"
+                        header_data += LASER_ON+"\n"
                         size = 60
                         header_data += ";(%s)\n" % ("*"*size)
                         header_data += (";(***** Layer: %%-%ds *****)\n" % (size-19)) % (originalLayerName)

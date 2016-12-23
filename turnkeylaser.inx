@@ -6,7 +6,7 @@
     <effect>
         <object-type>path</object-type>
         <effects-menu>
-            <submenu _name="Export"/>
+            <submenu _name="Laser Tools"/>
         </effects-menu>
     </effect>
 
